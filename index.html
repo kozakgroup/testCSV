@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        table, th, td 
+        {
+            border: solid 1px #DDD;
+            border-collapse: collapse;
+            padding: 2px 3px;
+            text-align: center;
+        }
+        th {
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .headerSortDown:after,
+        .headerSortUp:after {
+          content: ' ';
+          position: relative;
+          left: 2px;
+          border: 8px solid transparent;
+        }
+
+        .headerSortDown:after {
+          top: 10px;
+          border-top-color: silver;
+        }
+
+        .headerSortUp:after {
+          bottom: 15px;
+          border-bottom-color: silver;
+        }
+
+        .headerSortDown,
+        .headerSortUp {
+          padding-right: 10px;
+        }
+
+    </style>
+    <script>
+      class CSV {
+        constructor() { 
+          this.sortDirection = 'ASC';
+          this.getData().then(result => this.renderCSV(result));
+        }
+
+      renderCSV (result) {
+        let columns = [];
+        result.forEach(r => {
+          Object.keys(r).forEach(key =>
+            !~columns.indexOf(key) && columns.push(key)
+          );
+        });
+        let table = document.createElement('table');
+        table.setAttribute('id', 'csvTable');
+        let tr = table.insertRow(-1);
+
+        columns.forEach(c => {
+          let th = document.createElement('th');
+          th.innerHTML = c;
+          tr.appendChild(th);
+          th.addEventListener('click', (e) => {
+            this.getData(c).then(result => this.rerenderRows(result));
+            document.querySelectorAll('th').forEach(e => e.removeAttribute('class'));
+            event.target.className = this.sortDirection === 'ASC' ? 'headerSortUp' : 'headerSortDown';
+          });
+        });
+
+        result.forEach(row => {
+          tr = table.insertRow(-1);
+          columns.forEach(c => {
+            let tabCell = tr.insertCell(-1);
+            tabCell.innerHTML = row[c];
+          });
+        });
+        const csvData = document.getElementById('csvData');
+        csvData.appendChild(table);
+      }
+
+      getData (sortColumn) {
+        const query = sortColumn ? `?sortcolumn=${sortColumn}&sortdir=${this.changeDirection()}` : ''
+        return fetch(`http://localhost:3005/api/table${query}`)
+          .then(data => data.json());
+      }
+
+      changeDirection () {
+        this.sortDirection = this.sortDirection === 'ASC' ? 'DESC' : 'ASC';
+        return this.sortDirection;
+      }
+
+      rerenderRows (result) {
+        let table = document.getElementById('csvTable');
+        let rows = Array.from(table.rows);
+        let headRows = Array.from(rows[0].cells);
+        rows.forEach((r, i) => {
+          i && Array.from(r.cells).forEach((c, j) => {
+            c.innerHTML = result[i - 1][headRows[j].innerHTML]
+          })
+        });
+      }
+      }
+
+    new CSV();
+    </script>
+</head>
+<body>
+  <div id="csvData"></div>
+</body>
+</html>
